@@ -1,5 +1,5 @@
-// This is Mike Library
-// This Library is mainly use for checking SD card intallation process and Store The Value which achieved from the Sensor to Data Log File
+// This Is Mike Library
+// This Library Is Mainly Use For Checking SD Card Installation Process And Store Information From The Sensor To The Data Log File
 
 #ifndef DATALOG_H
 #include <Arduino.h>
@@ -16,15 +16,15 @@
 #include <RTCDue.h>
 
 #if SPI_DRIVER_SELECT == 2  // Must be set in SdFat/SdFatConfig.h
-//DO THIS BEFORE YOU COMPILE, OTHERWISE THE PROJECT WON'T WORK
+//DO THIS BEFORE YOU COMPILE, OTHERWISE The Device Will Not Work
 
 // SD_FAT_TYPE = 0 for SdFat/File as defined in SdFatConfig.h,
 // 1 for FAT16/FAT32, 2 for exFAT, 3 for FAT16/FAT32 and exFAT.
 #define SD_FAT_TYPE 0
-
+//
 // Chip select may be constant or RAM variable.
 const uint8_t SD_CS_PIN = A3;
-
+//
 // Pin numbers in templates must be constants.
 const uint8_t SOFT_MISO_PIN = 12;
 const uint8_t SOFT_MOSI_PIN = 11;
@@ -39,6 +39,7 @@ SoftSpiDriver<SOFT_MISO_PIN, SOFT_MOSI_PIN, SOFT_SCK_PIN> softSpi;
 #define SD_CONFIG SdSpiConfig(SD_CS_PIN, SHARED_SPI, SD_SCK_MHZ(0), &softSpi)
 #endif  // ENABLE_DEDICATED_SPI
 
+// Chosing The Right Card And The Right File
 #if SD_FAT_TYPE == 0
 SdFat sd;
 File file;
@@ -60,6 +61,7 @@ FsFile file;
 // RTCDue rtc(RC);
 RTCDue rtc(XTAL);
 enum SD_settings
+// Connect SD intergration gate to the right pin number    
 {
     SD_CS = A3,
     // SD_RST = 6,
@@ -68,9 +70,10 @@ enum SD_settings
     SD_SCLK = 13,
     SD_MOSI = 11
 };
-// RTC_DS1307 rtc; I'm not in the mood for faulty hardware I don't know
-// Im more in the mood for faulty hardware I do know
+// RTC_DS1307 rtc;
+// Define the File Named logFile
 File logfile;
+// Define eject button always set as false because we don't want to eject the SD card at first
 bool eject_triggered_previously = false;
 void logsensordata()
 {
@@ -91,15 +94,22 @@ void logsensordata()
     logfile.print(output.pressure);
     logfile.print(",");
     logfile.print(lightoutput.lux);
-    logfile.println(); // End the line with a newline character
+    logfile.println(); // End the Line With A Newline Under
     logfile.flush();
-    //logfile.close();   // Close the file
+    
+    // Close the file
+    //logfile.close();   
     //Serial.println("Instance SD write");
 }
+
+
+// Create an Eject function for SD card Reader
 void SD_eject(){
+    //eject_triggered_previously set as false above
     if(eject_triggered_previously){
         return;
     }
+    //if eject button clicked: ---> close all file and exit the program
     logfile.close();
     sd.end();
     eject_triggered_previously = true;
@@ -108,21 +118,27 @@ void SD_init()
 {
     if (!sd.begin(SD_CONFIG))
     {
+        // This Function Is Used To Check The SD Installation Process Again To See Whether It Is Properly Inserted And Connected.
+        // Halting the program execution to prevent any further code execution that relies on the SD card.
         sd.initErrorHalt();
     }
-    Serial.println("Initialization done.");
+    Serial.println("Initialization Successfully.");
+    
+    // 0_RDWR : Allow To Read And Write On The File
+    // 0_CREAT: Allow To Create The File If It Doesn't Exist
+    // 0_SYNC: The File Operations should be synchronized with the underlying storage medium. It ensures that data is written to the storage device immediately after each write operation
     logfile = sd.open("sensor_log.CSV", O_RDWR | O_CREAT | O_SYNC);
     if(!logfile){
-        sd.errorHalt(F("open failed"));
+        sd.errorHalt(F("Error Opening File. Please Check And Try Again"));
     }
     if (logfile.size() == 0)
     {
-        Serial.println("Writing CSV header");
-        logfile.println("EPOCH,Temperature,Humidity,Pressure,Light intensity");
+        Serial.println("Writing CSV Header");
+        logfile.println("EPOCH,Temperature,Humidity,Pressure,Light Intensity");
+        //Write The Data Directly To SD Card Immediately. 
         logfile.flush();
     }
     rtc.begin();
 
-    //Timer.getAvailable().attachInterrupt(logsensordata).setFrequency(0.1).start();
 }
 #endif
